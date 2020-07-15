@@ -7,3 +7,11 @@ const (
 	password = "*******"
 	dbname   = "zorbish_demo"
 )
+
+type User struct {
+	ID        int
+	Age       int
+	FirstName string
+	LastName  string
+	Email     string
+}
