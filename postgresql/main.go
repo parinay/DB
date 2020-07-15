@@ -77,10 +77,12 @@ func main() {
 
 	fmt.Printf("Update :: ID=%d email=%s\n", id, email)
 
-	// query
+	// query - single record
 	var user User
 	sqlStatement = `SELECT * FROM users WHERE id=$1;`
 
+	// QueryRow() error handling is deferred untill Scan()
+	// And error is returned when 0 records are found.
 	row := db.QueryRow(sqlStatement, id)
 	err = row.Scan(&user.ID, &user.Age, &user.FirstName, &user.LastName, &user.Email)
 	switch err {
@@ -92,4 +94,31 @@ func main() {
 	default:
 		errorF(err)
 	}
+
+	// query - multiple records
+	fmt.Println("Multi row Query ::")
+	sqlStatement = `SELECT id, first_name FROM users LIMIT $1;`
+
+	// Query() No error is returned if no records are found.
+	// err could be returned even before you iterate over rows.
+	rows, err := db.Query(sqlStatement, 3)
+	errorF(err)
+
+	// Defer Close()
+	// Next() method closed the *Rows, if there are no more rows left.
+	// In case of error you will have to manially call close.
+	defer rows.Close()
+
+	// Next() will return an error or nil
+	for rows.Next() {
+		var id int
+		var firstname string
+
+		err = rows.Scan(&id, &firstname)
+		errorF(err)
+		fmt.Printf("ID = %d First Name = %s\n", id, firstname)
+	}
+	// Verify there was no error when calling rows.Next()
+	err = rows.Err()
+	errorF(err)
 }
