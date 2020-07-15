@@ -72,8 +72,24 @@ func main() {
 		errorF(err)
 		fmt.Println(count)
 	*/
-	err = db.QueryRow(sqlStatement, id, 5, "Spruha", "K", "spruha@Kemail.com").Scan(&id, &email)
+	err = db.QueryRow(sqlStatement, id, 5, "SpruhA", "K", "SpruhA@K.com").Scan(&id, &email)
 	errorF(err)
 
 	fmt.Printf("Update :: ID=%d email=%s\n", id, email)
+
+	// query
+	var user User
+	sqlStatement = `SELECT * FROM users WHERE id=$1;`
+
+	row := db.QueryRow(sqlStatement, id)
+	err = row.Scan(&user.ID, &user.Age, &user.FirstName, &user.LastName, &user.Email)
+	switch err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+		return
+	case nil:
+		fmt.Printf("Query :: %v\n", user)
+	default:
+		errorF(err)
+	}
 }
