@@ -59,10 +59,24 @@ def create_row():
 
 def delete_row():
     print("deleting row")
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    # code to delete the row in question
+
+    conn.commit()
+    close_db(conn, cursor)
 
 
 def update_row():
     print("updating row")
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    # code to update the row in question
+
+    conn.commit()
+    close_db(conn, cursor)
 
 
 def close_db(connection, cursor):
