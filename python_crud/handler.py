@@ -1,5 +1,5 @@
 import logging
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, abort, make_response, request
 from utils.helpers import setup_db, connect_to_db, close_db
 
 # from utils.conf import PSQLERROR
@@ -24,7 +24,7 @@ def read_row(empid):
     if items:
         return jsonify(items)
     else:
-        print("Its empty")
+        abort(404)
 
     query_acc = "SELECT * FROM account WHERE empid = %s"
     cursor.execute(query_acc, (empid,))
@@ -48,8 +48,8 @@ def read_rows():
     if items:
         return jsonify(items)
     else:
-        print("Its empty")
-    
+        abort(404)
+
     cursor.execute("SELECT * FROM account")
     items = cursor.fetchall()
 
@@ -61,11 +61,24 @@ def read_rows():
     close_db(conn, cursor)
 
 
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({"error": "Not Found"}), 404)
+
+
+@app.route("/apiv1/employees", methods=["POST"])
 def create_row():
+    if not request.json:
+        abort(400)
+
     conn = connect_to_db()
     cursor = conn.cursor()
-    info_record = (4, "Steve w", "steve@email.com")
-    acc_record = (3, 1236, "savings")
+    logging.info("The request is {requesti.json}")
+    employee_id = (request.json["empid"],)
+    employee_name = request.json["name"]
+    employee_email = request.json["email"]
+    info_record = (employee_id, employee_name, employee_email)
+    acc_record = (5, 1238, "savings")
     try:
         cursor.execute("INSERT INTO info (empid, name, email) VALUES (%s, %s, %s)", info_record)
     except Exception as err:
@@ -75,7 +88,9 @@ def create_row():
         cursor.execute("INSERT INTO account (empid, number, type) VALUES (%s, %s, %s)", acc_record)
     except Exception as err:
         logging.exception("Failed to insert record in table info: {str(err)}")
+
     conn.commit()
+    return jsonify(info_record), 201
     close_db(conn, cursor)
 
 

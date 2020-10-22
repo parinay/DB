@@ -14,12 +14,14 @@ def setup_db():
     conn = connect_to_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("CREATE TABLE info(empid serial PRIMARY KEY,  name VARCHAR(30), email VARCHAR(25))")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS info(empid serial PRIMARY KEY,  name VARCHAR(30), email VARCHAR(25))"
+        )
     except Exception as err:
         logging.exception("Unexpected err while creating table: {str(err)}")
 
     try:
-        cursor.execute("CREATE TABLE account(empid serial PRIMARY KEY,  number INT, type VARCHAR(10))")
+        cursor.execute("CREATE TABLE IF NOT EXISTS account(empid serial PRIMARY KEY,  number INT, type VARCHAR(10))")
     except Exception as err:
         logging.exception("Unexpected error while creating table: {str(err)}")
 
