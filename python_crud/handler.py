@@ -73,7 +73,6 @@ def create_row():
 
     conn = connect_to_db()
     cursor = conn.cursor()
-    logging.info("The request is {requesti.json}")
     employee_id = (request.json["empid"],)
     employee_name = request.json["name"]
     employee_email = request.json["email"]
@@ -90,8 +89,8 @@ def create_row():
         logging.exception("Failed to insert record in table info: {str(err)}")
 
     conn.commit()
-    return jsonify(info_record), 201
     close_db(conn, cursor)
+    return jsonify(info_record), 201
 
 
 def delete_row():
@@ -105,15 +104,28 @@ def delete_row():
     close_db(conn, cursor)
 
 
-def update_row():
-    print("updating row")
+@app.route("/apiv1/employees/<int:empid>", methods=["PUT"])
+def update_row(empid):
+    if not request.json:
+        abort(400)
     conn = connect_to_db()
     cursor = conn.cursor()
 
     # code to update the row in question
+    employee_id = request.json["empid"]
+    employee_name = request.json["name"]
+    employee_email = request.json["email"]
+    info_record = (employee_id, employee_name, employee_email, empid)
+
+    query_info = "UPDATE info SET empid =%s, name =%s, email = %s WHERE empid = %s"
+    try:
+        cursor.execute(query_info, (employee_id, employee_name, employee_email, empid))
+    except Exception as err:
+        logging.exception("Failed to insert record in table info: {str(err)}")
 
     conn.commit()
     close_db(conn, cursor)
+    return jsonify(info_record), 200
 
 
 if __name__ == "__main__":
