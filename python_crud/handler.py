@@ -93,25 +93,33 @@ def create_row():
     return jsonify(info_record), 201
 
 
-def delete_row():
-    print("deleting row")
+@app.route("/apiv1/employees/<int:empid>", methods=["DELETE"])
+def delete_row(empid):
+    # check if the record exists
+    read_row(empid)
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    # code to delete the row in question
+    query_info = "DELETE FROM info WHERE empid = %s"
+    try:
+        cursor.execute(query_info, (empid,))
+    except Exception as err:
+        logging.exception("Failed to delete record in table info: {str(err)}")
 
     conn.commit()
     close_db(conn, cursor)
+    return jsonify({"result": "Success"}), 200
 
 
 @app.route("/apiv1/employees/<int:empid>", methods=["PUT"])
 def update_row(empid):
+    # check if the record exists
+    read_row(empid)
     if not request.json:
         abort(400)
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    # code to update the row in question
     employee_id = request.json["empid"]
     employee_name = request.json["name"]
     employee_email = request.json["email"]
@@ -121,7 +129,7 @@ def update_row(empid):
     try:
         cursor.execute(query_info, (employee_id, employee_name, employee_email, empid))
     except Exception as err:
-        logging.exception("Failed to insert record in table info: {str(err)}")
+        logging.exception("Failed to update record in table info: {str(err)}")
 
     conn.commit()
     close_db(conn, cursor)
