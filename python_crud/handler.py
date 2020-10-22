@@ -82,11 +82,12 @@ def create_row():
         cursor.execute("INSERT INTO info (empid, name, email) VALUES (%s, %s, %s)", info_record)
     except Exception as err:
         logging.exception("Failed to insert record in table info: {str(err)}")
-
+        raise
     try:
         cursor.execute("INSERT INTO account (empid, number, type) VALUES (%s, %s, %s)", acc_record)
     except Exception as err:
         logging.exception("Failed to insert record in table info: {str(err)}")
+        raise
 
     conn.commit()
     close_db(conn, cursor)
@@ -105,6 +106,7 @@ def delete_row(empid):
         cursor.execute(query_info, (empid,))
     except Exception as err:
         logging.exception("Failed to delete record in table info: {str(err)}")
+        raise
 
     conn.commit()
     close_db(conn, cursor)
@@ -130,6 +132,7 @@ def update_row(empid):
         cursor.execute(query_info, (employee_id, employee_name, employee_email, empid))
     except Exception as err:
         logging.exception("Failed to update record in table info: {str(err)}")
+        raise
 
     conn.commit()
     close_db(conn, cursor)

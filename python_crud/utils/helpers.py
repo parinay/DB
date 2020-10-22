@@ -17,13 +17,24 @@ def setup_db():
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS info(empid serial PRIMARY KEY,  name VARCHAR(30), email VARCHAR(25))"
         )
+    except psy.DatabaseError as err:
+        logging.exception("Database error while creating table: {str(err)}")
+        raise
+    except psy.OperationalError as err:
+        logging.exception("Operation error while creating table: {str(err)}")
+        raise
     except Exception as err:
         logging.exception("Unexpected err while creating table: {str(err)}")
+        raise
 
     try:
         cursor.execute("CREATE TABLE IF NOT EXISTS account(empid serial PRIMARY KEY,  number INT, type VARCHAR(10))")
+    except psy.OperationalError as err:
+        logging.exception("Operation error while creating table: {str(err)}")
+        raise
     except Exception as err:
         logging.exception("Unexpected error while creating table: {str(err)}")
+        raise
 
     conn.commit()
     close_db(conn, cursor)
