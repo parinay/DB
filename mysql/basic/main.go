@@ -33,15 +33,15 @@ func dataSourceName(dbname string) string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, hostname, port, dbname)
 	//root:Par1nay!@tcp(127.0.0.2:3306)/testDB
 }
-func main() {
+func dbConnection() (*sql.DB, error) {
 
 	db, err := sql.Open("mysql", dataSourceName(""))
 
 	if err != nil {
 		log.Printf("Error %s when opening DB\n", err)
-		return
+		return nil, err
 	}
-	defer db.Close()
+	// defer db.Close()
 	// create
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
@@ -49,12 +49,12 @@ func main() {
 	res, err := db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+dbname)
 	if err != nil {
 		log.Printf("Error %s when creating DB\n", err)
-		return
+		return nil, err
 	}
 	no, err := res.RowsAffected()
 	if err != nil {
 		log.Printf("Error %s when fetching rows", err)
-		return
+		return nil, err
 	}
 	log.Printf("No of rows affected are %d\n", no)
 
@@ -63,9 +63,9 @@ func main() {
 	db, err = sql.Open("mysql", dataSourceName(dbname))
 	if err != nil {
 		log.Printf("Error %s when opening DB", err)
-		return
+		return nil, err
 	}
-	defer db.Close()
+	// defer db.Close()
 
 	db.SetMaxOpenConns(20)
 	db.SetMaxIdleConns(20)
@@ -77,28 +77,86 @@ func main() {
 	err = db.PingContext(ctx)
 	if err != nil {
 		log.Printf("Errors %s pinging DB %s", err, dbname)
-		return
+		return nil, err
 	}
 	log.Printf("Connected to DB %s successfully\n", dbname)
+
+	return db, nil
+}
+func createTable(db *sql.DB) error {
 	// create table
-	res, err = db.ExecContext(ctx, `CREATE TABLE  users (
+	query := `CREATE TABLE  IF NOT EXISTS users (
 		id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(100),
 		city VARCHAR(20),
 		state VARCHAR(12)
-		)`)
+		)`
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	res, err := db.ExecContext(ctx, query)
 	if err != nil {
-		log.Printf("Error %s when creating tables\n", err)
+		log.Printf("Error %s when creating the table\n", err)
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("Error %s when getting rows affected", err)
+		return err
+	}
+	log.Printf("Rows affected when creating the table:%d\n", rows)
+	return nil
+}
+func insert(db *sql.DB, u Users) error {
+
+	// insert
+	query := "INSERT INTO users VALUES (?, ?, ?, ?)"
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	insert, err := db.PrepareContext(ctx, query)
+	if err != nil {
+		log.Printf("Error %s inserting into DB", err)
+		return err
+	}
+	defer insert.Close()
+
+	res, err := insert.ExecContext(ctx, u.ID, u.Name, u.City, u.State)
+	if err != nil {
+		log.Printf("Error %s when inseting row into users table", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("Error %s when finding rows affected", err)
+		return err
+	}
+	log.Printf("%d users created ", rows)
+	return nil
+}
+func main() {
+	db, err := dbConnection()
+	if err != nil {
+		log.Printf("Error %s when setting up the db connection", err)
+		return
+	}
+	defer db.Close()
+
+	err = createTable(db)
+	if err != nil {
+		log.Printf("Error %s when creating the table", err)
 		return
 	}
 
-	// insert
-	insert, err := db.Query("INSERT INTO users VALUES (3, 'danny', 'Mumbai','MH')")
+	u := Users{
+		ID:    1,
+		Name:  "Danny",
+		City:  "Mumbai",
+		State: "MH",
+	}
+	err = insert(db, u)
 	if err != nil {
-		log.Printf("Error %s inserting into DB", err)
+		log.Printf("Error %s when inserting a row in the table", err)
 		return
 	}
-	defer insert.Close()
 	// query
 	results, err := db.Query("SELECT * FROM users")
 	if err != nil {
