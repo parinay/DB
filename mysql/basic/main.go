@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	// When we import the package prefixed with the blank identifier _ "github.com/go-sql-driver/mysql",
@@ -23,7 +24,7 @@ type Users struct {
 const (
 	username = "newuser"
 	password = "password"
-	hostname = "127.0.0.1"
+	hostname = "localhost"
 	port     = "3306"
 	dbname   = "ecommerce"
 )
@@ -130,6 +131,53 @@ func insert(db *sql.DB, u Users) error {
 		return err
 	}
 	log.Printf("%d users created ", rows)
+	userID, err := res.LastInsertId()
+	if err != nil {
+		log.Printf("Error %s when getting last inserted user", err)
+		return err
+	}
+	log.Printf("User with ID %d created", userID)
+	return nil
+}
+func multipleInsert(db *sql.DB, users []Users) error {
+	query := "INSERT INTO users VALUES"
+
+	var inserts []string
+	var params []interface{}
+
+	for _, v := range users {
+		inserts = append(inserts, "(?, ?, ?, ?)")
+		params = append(params, v.ID, v.Name, v.City, v.State)
+	}
+
+	queryVals := strings.Join(inserts, ",")
+	query = query + queryVals
+
+	log.Println("Query is ", query)
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	stmt, err := db.PrepareContext(ctx, query)
+
+	if err != nil {
+		log.Printf("Error %s when preparing SQL statement", err)
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.ExecContext(ctx, params...)
+
+	if err != nil {
+		log.Printf("Error %s when inserting row into Users table", err)
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("Error %s when finding the rows affected", err)
+		return err
+	}
+	log.Printf("%d users created simultaneously", rows)
 	return nil
 }
 func main() {
@@ -147,16 +195,17 @@ func main() {
 	}
 
 	u := Users{
-		ID:    1,
-		Name:  "Danny",
-		City:  "Mumbai",
-		State: "MH",
+		ID:    9,
+		Name:  "Scala",
+		City:  "Paulo Alto",
+		State: "CA",
 	}
 	err = insert(db, u)
 	if err != nil {
 		log.Printf("Error %s when inserting a row in the table", err)
 		return
 	}
+
 	// query
 	results, err := db.Query("SELECT * FROM users")
 	if err != nil {
@@ -171,4 +220,23 @@ func main() {
 		}
 		log.Println(user.ID, user.Name, user.City, user.State)
 	}
+
+	u1 := Users{
+		ID:    6,
+		Name:  "Steve",
+		City:  "San Francisco",
+		State: "CA",
+	}
+	u2 := Users{
+		ID:    7,
+		Name:  "Alan",
+		City:  "Maida Vale",
+		State: "London",
+	}
+	err = multipleInsert(db, []Users{u1, u2})
+	if err != nil {
+		log.Printf("Multiple insert failed with error %s", err)
+		return
+	}
+
 }
