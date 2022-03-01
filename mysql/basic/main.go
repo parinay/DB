@@ -22,8 +22,8 @@ type Users struct {
 }
 
 const (
-	username = "newuser"
-	password = "password"
+	username = "myroot"
+	password = "myrootPasswd@123"
 	hostname = "localhost"
 	port     = "3306"
 	dbname   = "ecommerce"
@@ -180,6 +180,26 @@ func multipleInsert(db *sql.DB, users []Users) error {
 	log.Printf("%d users created simultaneously", rows)
 	return nil
 }
+func selectRow(db *sql.DB, userID int) (string, error) {
+	log.Printf("Getting user name")
+	query := "select name from users where ID = ?"
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	stmt, err := db.PrepareContext(ctx, query)
+	if err != nil {
+		log.Printf("Error %s when preparing SQL statement", err)
+		return "", err
+	}
+	defer stmt.Close()
+	var userName string
+	row := stmt.QueryRowContext(ctx, userID)
+
+	if err := row.Scan(&userName); err != nil {
+		return "", err
+	}
+	return userName, err
+}
 func main() {
 	db, err := dbConnection()
 	if err != nil {
@@ -193,13 +213,13 @@ func main() {
 		log.Printf("Error %s when creating the table", err)
 		return
 	}
-
 	u := Users{
 		ID:    9,
 		Name:  "Scala",
 		City:  "Paulo Alto",
 		State: "CA",
 	}
+
 	err = insert(db, u)
 	if err != nil {
 		log.Printf("Error %s when inserting a row in the table", err)
@@ -233,10 +253,23 @@ func main() {
 		City:  "Maida Vale",
 		State: "London",
 	}
+
 	err = multipleInsert(db, []Users{u1, u2})
 	if err != nil {
 		log.Printf("Multiple insert failed with error %s", err)
 		return
+	}
+
+	userID := 6
+	userCity, err := selectRow(db, userID)
+
+	switch {
+	case err == sql.ErrNoRows:
+		log.Printf("User id %d not found", userID)
+	case err != nil:
+		log.Printf("Encountered err %s when fetching user ID %d from DB", err, userID)
+	default:
+		log.Printf("User name is %s for user ID %d", userCity, userID)
 	}
 
 }
